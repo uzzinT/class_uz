@@ -15,12 +15,17 @@
   header p { margin: 10px 0 0; color: var(--muted); font-size: 17px; }
   body.me { --accent: #8C7CF0; --bg: #F7F5FF; --dot: #E6E0FA; --line: #E4DEF5; }
 
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 4px 0 18px; }
-  .chip { padding: 8px 16px; border-radius: 999px; background: var(--card); border: 2px solid var(--line); text-decoration: none; font-weight: 700; white-space: nowrap; }
-  .chip small { color: var(--muted); font-weight: 400; margin-left: 2px; }
-  .chip:hover, .chip:focus-visible { border-color: var(--accent); outline: none; }
-  .chip[aria-current=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .chip[aria-current=true] small { color: inherit; opacity: .8; }
+  .strips { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .strip { display: flex; flex-direction: column; gap: 4px; padding: 22px 22px 18px; min-height: 150px; border-radius: 26px; text-decoration: none;
+           background: var(--tint); border: 2px solid transparent; box-shadow: var(--shadow); transition: transform .15s; }
+  .strip:hover, .strip:focus-visible { transform: translateY(-3px) rotate(-1deg); border-color: var(--accent); outline: none; }
+  .strip .big { font-size: 44px; line-height: 1; }
+  .strip .sname { font-family: Jua, Paperlogy, sans-serif; font-size: 26px; margin-top: auto; }
+  .strip .count { font-size: 14px; color: var(--ink); opacity: .65; }
+  .crumb { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .crumb a { padding: 7px 16px; border-radius: 999px; background: var(--card); border: 2px solid var(--line); text-decoration: none; font-weight: 700; }
+  .crumb a:hover, .crumb a:focus-visible { border-color: var(--accent); outline: none; }
+  .crumb h2 { margin: 0; font-size: 28px; }
   input[type=search] { max-width: 520px; display: block; margin: 0 auto 22px; border-radius: 999px; padding: 12px 20px; }
 
   .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); padding-bottom: 40px; }
@@ -67,8 +72,8 @@
     <div class="row" style="margin-top:12px"><button class="primary" id="loginBtn">열기</button></div>
     <p class="hint">처음이라면 <a href="admin.html">⚙️ 관리 화면</a>에서 비밀번호를 먼저 정해 주세요.</p>
   </section>
-  <nav class="chips" id="chips" aria-label="분류"></nav>
-  <input type="search" id="q" placeholder="🔍 이름이나 설명으로 찾기" aria-label="검색">
+  <input type="search" id="q" placeholder="🔍 전체에서 이름이나 설명으로 찾기" aria-label="검색">
+  <div class="crumb" id="crumb" hidden><a href="#">← 전체</a><h2 class="title" id="catTitle"></h2></div>
   <div class="grid" id="grid"></div>
 </main>
 
@@ -144,15 +149,27 @@ function showQr(it, url) {
 function render() {
   const q = $("q").value.trim().toLowerCase();
   const id = decodeURIComponent(location.hash.slice(1));
-  const cats = [...categories, OTHER].filter(c => c !== OTHER || items.some(it => catOf(it) === OTHER));
+  const all = [...categories, OTHER];
+  const cats = all.filter(c => c !== OTHER || items.some(it => catOf(it) === OTHER));
   const current = cats.find(c => c.id === id);
-  const chip = (href, label, n, on) => {
-    const a = el("a", { className: "chip", href }, label, el("small", {}, n));
-    a.setAttribute("aria-current", on);
-    return a;
-  };
-  $("chips").replaceChildren(chip("#", "🌈 전체", items.length, !current),
-    ...cats.map(c => chip("#" + encodeURIComponent(c.id), (c.emoji || "📌") + " " + c.name, items.filter(it => catOf(it) === c).length, c === current)));
+  $("crumb").hidden = !current;
+  if (current) $("catTitle").textContent = (current.emoji || "📌") + " " + current.name;
+  $("q").placeholder = current ? "🔍 " + current.name + "에서 찾기" : "🔍 전체에서 이름이나 설명으로 찾기";
+
+  if (!current && !q) { // home: one big tile per category
+    $("grid").className = "grid strips";
+    $("grid").replaceChildren(...cats.map(c => {
+      const a = el("a", { className: "strip", href: "#" + encodeURIComponent(c.id) },
+        el("span", { className: "big", ariaHidden: "true" }, c.emoji || "📌"),
+        el("span", { className: "sname" }, c.name),
+        el("span", { className: "count" }, items.filter(it => catOf(it) === c).length + "개"));
+      a.style.setProperty("--tint", tint(all.indexOf(c)));
+      return a;
+    }));
+    if (!cats.length) $("grid").append(el("p", { className: "empty" }, "아직 분류가 없어요 🌱"));
+    return;
+  }
+  $("grid").className = "grid";
   const shown = items.filter(it => (!current || catOf(it) === current) && (it.title + " " + (it.desc || "")).toLowerCase().includes(q));
   $("grid").replaceChildren(...shown.map(card));
   if (!shown.length) $("grid").append(el("p", { className: "empty" }, q ? "찾는 게 없어요 🥲" : "아직 올라온 게 없어요 🌱"));
@@ -165,7 +182,7 @@ async function openMe() {
     const file = await gh(REPOS.me, "links.json");
     ({ categories, items } = normalize(JSON.parse(fromB64(file.content))));
     $("login").hidden = true;
-    $("chips").hidden = $("q").hidden = false;
+    $("q").hidden = false;
     render();
   } catch (e) {
     store("gh_token", null);
@@ -176,7 +193,7 @@ async function openMe() {
   }
 }
 
-function showLogin() { $("login").hidden = false; $("chips").hidden = $("q").hidden = true; $("pw").focus(); }
+function showLogin() { $("login").hidden = false; $("q").hidden = true; $("pw").focus(); }
 
 async function login() {
   if (!$("pw").value) return;
@@ -189,7 +206,7 @@ async function login() {
 $("q").addEventListener("input", render);
 $("qrClose").onclick = () => $("qrBig").close();
 $("qrBig").addEventListener("click", e => { if (e.target === $("qrBig")) $("qrBig").close(); }); // backdrop click
-addEventListener("hashchange", () => { $("q").value = ""; render(); });
+addEventListener("hashchange", () => { $("q").value = ""; render(); scrollTo(0, 0); });
 monkeyEyes();
 
 $("toPub").hidden = !ME;

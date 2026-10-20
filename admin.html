@@ -21,9 +21,12 @@
   .cat { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
   .cat input:first-child { text-align: center; font-size: 22px; padding: 6px; }
   .cat button { padding: 6px 10px; }
-  .head { justify-content: space-between; margin: 22px 0 10px; }
-  .head h2 { margin: 0; }
-  .head select { width: auto; padding: 8px 12px; }
+  .group { margin-bottom: 22px; }
+  .ghead { justify-content: space-between; padding: 10px 16px; margin-bottom: 10px; border-radius: 18px; background: var(--tint); }
+  .ghead h3 { margin: 0; font-size: 22px; }
+  .ghead h3 small { font-family: Paperlogy, sans-serif; font-size: 14px; opacity: .6; margin-left: 4px; }
+  .ghead button { padding: 6px 12px; font-size: 14px; }
+  .group > .hint { margin: 0 0 0 16px; }
   details.panel { padding: 10px 14px; }
   details.panel[open] { padding-bottom: 16px; }
   details.panel > summary { list-style: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
@@ -85,16 +88,9 @@
       <button id="addCatBtn" style="margin-top:6px">➕ 분류 추가</button>
     </section>
 
-    <div class="row head">
-      <h2 class="title">📌 링크 · 파일</h2>
-      <div class="row">
-        <select id="filter" aria-label="분류별로 보기"></select>
-        <button class="primary" id="addLinkBtn">🔗 링크 추가</button>
-        <button class="primary" id="addFileBtn">📎 파일 추가</button>
-      </div>
-    </div>
+    <h2 class="title">📌 분류별 링크 · 파일</h2>
     <div id="list"></div>
-    <div class="row"><button id="logoutBtn" style="margin-left:auto">로그아웃</button></div>
+    <div class="row"><button id="logoutBtn" style="margin-left:auto">로그아웃하고 자료실로 🏠</button></div>
   </div>
 </main>
 
@@ -175,7 +171,6 @@ async function loadRepo() {
   $("where").textContent = repo === "pub"
     ? "🌷 링크를 아는 누구나 볼 수 있어요. 학생 개인정보가 담긴 파일은 올리지 마세요."
     : "🔒 비공개 저장소에 저장돼서 비밀번호를 아는 나만 볼 수 있어요.";
-  $("filter").replaceChildren();
   render();
   say("불러왔어요.");
   return true;
@@ -223,32 +218,36 @@ async function setup() {
   }
 }
 
-const catName = id => categories.find(c => c.id === id)?.name || "기타";
 const catOpts = () => [{ id: "", name: "기타" }, ...categories].map(c => new Option((c.emoji ? c.emoji + " " : "") + (c.name || "이름 없음"), c.id));
 
-function renderFilter() {
-  const f = $("filter"), keep = f.options.length ? f.value : "*";
-  f.replaceChildren(new Option("전체 보기", "*"), ...catOpts());
-  f.value = [...f.options].some(o => o.value === keep) ? keep : "*";
-}
-
-function addItem(type) {
-  const cat = $("filter").value === "*" ? "" : $("filter").value; // starts in the category being viewed
+function addItem(type, cat) {
   const it = type === "file" ? { type, title: "", desc: "", cat, file: "", name: "" } : { type, title: "", desc: "", cat, url: "" };
-  items.unshift(it);
+  items.unshift(it); // first in its category
   openItems.add(it);
   render();
   dirty();
-  const first = $("list").firstElementChild;
-  first.scrollIntoView({ behavior: "smooth", block: "center" });
-  if (type === "file") first.querySelector("input[type=file]").click();
-  else first.querySelector("[data-k=title]").focus({ preventScroll: true });
+  const box = elOf.get(it);
+  box.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (type === "file") box.querySelector("input[type=file]").click();
+  else box.querySelector("[data-k=title]").focus({ preventScroll: true });
 }
 
 function move(arr, i, d) {
   const j = i + d;
   if (j < 0 || j >= arr.length) return;
   [arr[i], arr[j]] = [arr[j], arr[i]];
+  render();
+  dirty();
+}
+
+// Items are stored in one list; moving swaps with the nearest item of the same category.
+function moveItem(it, d) {
+  const key = x => categories.some(c => c.id === x.cat) ? x.cat : "";
+  const i = items.indexOf(it);
+  let j = i + d;
+  while (j >= 0 && j < items.length && key(items[j]) !== key(it)) j += d;
+  if (j < 0 || j >= items.length) return;
+  [items[i], items[j]] = [items[j], items[i]];
   render();
   dirty();
 }
@@ -280,41 +279,60 @@ function renderCats() {
   }));
 }
 
+const elOf = new Map(); // item → its editor, for scrolling to it
+
 function render() {
   renderCats();
-  renderFilter();
-  const filter = $("filter").value;
-  $("list").replaceChildren(...items.map((it, i) => {
-    const el = $("entryTpl").content.firstElementChild.cloneNode(true);
-    const isFile = it.type === "file";
-    el.open = openItems.has(it);
-    el.hidden = filter !== "*" && (categories.some(c => c.id === it.cat) ? it.cat : "") !== filter;
-    el.addEventListener("toggle", () => { el.open ? openItems.add(it) : openItems.delete(it); });
-    el.querySelector(isFile ? ".link-only" : ".file-only").remove();
-    const summary = () => {
-      el.querySelector(".sum-icon").textContent = it.emoji || categories.find(c => c.id === it.cat)?.emoji || (isFile ? "📎" : "🔗");
-      el.querySelector(".sum-title").textContent = it.title || (isFile ? "새 파일" : "새 링크") + " (제목 없음)";
-      el.querySelector(".sum-sub").textContent = (isFile ? "📎 " : "🔗 ") + catName(it.cat);
-    };
-    summary();
-    el.querySelector("select").append(...catOpts());
-    el.querySelectorAll("[data-k]").forEach(input => {
-      input.value = it[input.dataset.k] || "";
-      input.addEventListener("input", () => { it[input.dataset.k] = input.value; summary(); dirty(); });
-    });
-    if (isFile) {
-      const fname = el.querySelector(".fname");
-      fname.textContent = it.name || "아직 파일이 없어요";
-      el.querySelector("input[type=file]").addEventListener("change", e => uploadFile(e.target.files[0], it, fname, summary));
-    }
-    el.querySelector(".up").onclick = () => move(items, i, -1);
-    el.querySelector(".down").onclick = () => move(items, i, 1);
-    el.querySelector(".del").onclick = () => {
-      if (!confirm("'" + (it.title || "제목 없음") + "'을(를) 삭제할까요?")) return;
-      items.splice(i, 1); render(); dirty();
-    };
-    return el;
+  elOf.clear();
+  const groups = [...categories, { id: "", name: "기타", emoji: "📦" }];
+  $("list").replaceChildren(...groups.map((c, gi) => {
+    const mine = items.filter(it => (categories.some(x => x.id === it.cat) ? it.cat : "") === c.id);
+    if (c.id === "" && !mine.length) return "";
+    const sec = Object.assign(document.createElement("section"), { className: "group" });
+    sec.style.setProperty("--tint", tint(gi));
+    const head = Object.assign(document.createElement("div"), { className: "row ghead" });
+    const h3 = Object.assign(document.createElement("h3"), { className: "title", textContent: (c.emoji || "📌") + " " + (c.name || "이름 없음") });
+    h3.append(Object.assign(document.createElement("small"), { textContent: mine.length + "개" }));
+    const add = (text, type) => Object.assign(document.createElement("button"), { textContent: text, onclick: () => addItem(type, c.id) });
+    const tools = Object.assign(document.createElement("div"), { className: "row" });
+    tools.append(add("🔗 링크 추가", "link"), add("📎 파일 추가", "file"));
+    head.append(h3, tools);
+    sec.append(head, ...(mine.length ? mine.map(entry) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "아직 없어요. 위 버튼으로 추가해 보세요 🌱" })]));
+    return sec;
   }));
+}
+
+function entry(it) {
+  const el = $("entryTpl").content.firstElementChild.cloneNode(true);
+  elOf.set(it, el);
+  const isFile = it.type === "file";
+  el.open = openItems.has(it);
+  el.addEventListener("toggle", () => { el.open ? openItems.add(it) : openItems.delete(it); });
+  el.querySelector(isFile ? ".link-only" : ".file-only").remove();
+  const summary = () => {
+    el.querySelector(".sum-icon").textContent = it.emoji || categories.find(c => c.id === it.cat)?.emoji || (isFile ? "📎" : "🔗");
+    el.querySelector(".sum-title").textContent = it.title || (isFile ? "새 파일" : "새 링크") + " (제목 없음)";
+    el.querySelector(".sum-sub").textContent = isFile ? "📎 파일" : "🔗 링크";
+  };
+  summary();
+  el.querySelector("select").append(...catOpts());
+  el.querySelectorAll("[data-k]").forEach(input => {
+    input.value = it[input.dataset.k] || "";
+    input.addEventListener("input", () => { it[input.dataset.k] = input.value; summary(); dirty(); });
+  });
+  el.querySelector("select").addEventListener("change", render); // jump to the new category's group
+  if (isFile) {
+    const fname = el.querySelector(".fname");
+    fname.textContent = it.name || "아직 파일이 없어요";
+    el.querySelector("input[type=file]").addEventListener("change", e => uploadFile(e.target.files[0], it, fname, summary));
+  }
+  el.querySelector(".up").onclick = () => moveItem(it, -1);
+  el.querySelector(".down").onclick = () => moveItem(it, 1);
+  el.querySelector(".del").onclick = () => {
+    if (!confirm("'" + (it.title || "제목 없음") + "'을(를) 삭제할까요?")) return;
+    items.splice(items.indexOf(it), 1); render(); dirty();
+  };
+  return el;
 }
 
 // Uploads right away to files/ with an ASCII name; the original name is kept for the download.
@@ -344,11 +362,10 @@ async function uploadFile(file, it, fname, summary) {
 
 async function save() {
   if (categories.some(c => !c.name.trim())) return alert("이름이 비어 있는 분류가 있어요.");
-  const reveal = (it, msg) => { // the bad entry may be collapsed or filtered out
+  const reveal = (it, msg) => { // the bad entry may be collapsed
     openItems.add(it);
-    $("filter").value = "*";
     render();
-    $("list").children[items.indexOf(it)].scrollIntoView({ block: "center" });
+    elOf.get(it).scrollIntoView({ block: "center" });
     alert(msg);
   };
   for (const it of items) {
@@ -389,9 +406,6 @@ $("pw").addEventListener("keydown", e => e.key === "Enter" && login());
 $("setupBtn").onclick = setup;
 $("resetLink").onclick = e => { e.preventDefault(); show("setup"); };
 $("addCatBtn").onclick = () => { categories.push({ id: Date.now().toString(36), name: "", emoji: "🌟" }); render(); dirty(); };
-$("addLinkBtn").onclick = () => addItem("link");
-$("addFileBtn").onclick = () => addItem("file");
-$("filter").onchange = render;
 $("saveBtn").onclick = save;
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = async () => {
   if (b.dataset.repo === repo) return;
@@ -400,7 +414,7 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = async () => {
   repo = b.dataset.repo;
   if (!(await loadRepo())) { repo = prev; say(""); }
 });
-$("logoutBtn").onclick = () => { store("gh_token", null); location.reload(); };
+$("logoutBtn").onclick = () => { store("gh_token", null); location.href = "./"; }; // back to the public page
 addEventListener("beforeunload", e => { if (isDirty()) e.preventDefault(); });
 
 if (load("gh_token")) openEditor(load("gh_token")).then(ok => ok || show("login"));
