@@ -1,9 +1,9 @@
 {
   "categories": [
-    { "id": "notice", "name": "알림·공지", "emoji": "📢" },
-    { "id": "forms", "name": "양식·서식", "emoji": "📝" },
-    { "id": "class", "name": "수업·활동", "emoji": "🎨" },
-    { "id": "parents", "name": "학부모", "emoji": "🏡" }
+    { "id": "forms", "name": "학급 운영 양식", "emoji": "📝" },
+    { "id": "notice", "name": "안내문·통신문", "emoji": "📢" },
+    { "id": "class", "name": "학급 활동", "emoji": "🎨" },
+    { "id": "tools", "name": "도구·사이트", "emoji": "🧰" }
   ],
   "items": []
 }

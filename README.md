@@ -1,8 +1,8 @@
 # class_uz 🌱
 
-우리 반 운영에 필요한 링크와 파일 꾸러미
+선생님들과 나누는 학급 운영 양식·링크 꾸러미
 
-- 공개 화면: https://uzzint.github.io/class_uz/
+- 공유 화면: https://uzzint.github.io/class_uz/
 - 내 공간 (비밀번호): https://uzzint.github.io/class_uz/?me
 - 관리 화면: https://uzzint.github.io/class_uz/admin.html
 

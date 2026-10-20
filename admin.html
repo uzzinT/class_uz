@@ -52,7 +52,7 @@
 <body>
 <main>
   <h1 class="title">⚙️ 관리 화면</h1>
-  <p>여기서 고친 내용은 <a href="./" target="_blank">공개 화면</a>·<a href="./?me" target="_blank">내 공간</a>에 1~2분 뒤 반영돼요.</p>
+  <p>여기서 고친 내용은 <a href="./" target="_blank">공유 화면</a>·<a href="./?me" target="_blank">내 공간</a>에 1~2분 뒤 반영돼요.</p>
 
   <section class="panel" id="login" hidden>
     <label for="pw">관리자 비밀번호</label>
@@ -74,7 +74,7 @@
 
   <div id="editor" hidden>
     <div class="tabs" role="group" aria-label="어느 쪽을 고칠까요">
-      <button data-repo="pub" aria-pressed="true">🌷 공개 (학생·학부모용)</button>
+      <button data-repo="pub" aria-pressed="true">🌷 공유 (동료 선생님용)</button>
       <button data-repo="me" aria-pressed="false">🔒 내 공간 (나만)</button>
     </div>
     <p class="hint" id="where"></p>
@@ -173,7 +173,7 @@ async function loadRepo() {
   document.body.classList.toggle("me", repo === "me");
   document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.repo === repo));
   $("where").textContent = repo === "pub"
-    ? "🌷 누구나 볼 수 있어요. 학생 개인정보가 담긴 파일은 올리지 마세요."
+    ? "🌷 링크를 아는 누구나 볼 수 있어요. 학생 개인정보가 담긴 파일은 올리지 마세요."
     : "🔒 비공개 저장소에 저장돼서 비밀번호를 아는 나만 볼 수 있어요.";
   $("filter").replaceChildren();
   render();
