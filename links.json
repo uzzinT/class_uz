@@ -1,9 +1,25 @@
 {
   "categories": [
-    { "id": "forms", "name": "학급 운영 양식", "emoji": "📝" },
-    { "id": "notice", "name": "안내문·통신문", "emoji": "📢" },
-    { "id": "class", "name": "학급 활동", "emoji": "🎨" },
-    { "id": "tools", "name": "도구·사이트", "emoji": "🧰" }
+    {
+      "id": "forms",
+      "name": "학급 운영 양식",
+      "emoji": "📝"
+    },
+    {
+      "id": "notice",
+      "name": "안내문·통신문",
+      "emoji": "📢"
+    },
+    {
+      "id": "class",
+      "name": "학급 활동",
+      "emoji": "🎨"
+    },
+    {
+      "id": "tools",
+      "name": "도구·사이트",
+      "emoji": "🧰"
+    }
   ],
   "items": []
 }
