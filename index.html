@@ -13,7 +13,6 @@
   header h1 { margin: 6px 0 0; font-size: clamp(44px, 10vw, 72px); line-height: 1; color: var(--ink); }
   header h1 span { color: var(--accent); }
   header p { margin: 10px 0 0; color: var(--muted); font-size: 17px; }
-  body.me { --accent: #8C7CF0; --bg: #F7F5FF; --dot: #E6E0FA; --line: #E4DEF5; }
 
   .strips { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
   .strip { display: flex; flex-direction: column; gap: 4px; padding: 22px 22px 18px; min-height: 150px; border-radius: 26px; text-decoration: none;
@@ -51,7 +50,6 @@
   #qrBigTitle { display: block; font-size: 24px; }
   #qrBigUrl { display: block; color: #8A819C; word-break: break-all; margin: 4px 0 14px; }
 
-  #login { max-width: 420px; margin: 0 auto 40px; }
   footer { text-align: center; color: var(--muted); font-size: 14px; padding: 8px 0 32px; }
   footer a { text-decoration: none; margin: 0 6px; opacity: .6; }
   footer a:hover, footer a:focus-visible { opacity: 1; }
@@ -65,13 +63,6 @@
 </header>
 
 <main class="wrap">
-  <section class="panel" id="login" hidden>
-    <b>🔒 내 공간</b>
-    <label for="pw">비밀번호</label>
-    <input type="password" id="pw" autocomplete="current-password">
-    <div class="row" style="margin-top:12px"><button class="primary" id="loginBtn">열기</button></div>
-    <p class="hint">처음이라면 <a href="admin.html">⚙️ 관리 화면</a>에서 비밀번호를 먼저 정해 주세요.</p>
-  </section>
   <input type="search" id="q" placeholder="🔍 전체에서 이름이나 설명으로 찾기" aria-label="검색">
   <div class="crumb" id="crumb" hidden><a href="#">← 전체</a><h2 class="title" id="catTitle"></h2></div>
   <div class="grid" id="grid"></div>
@@ -84,12 +75,11 @@
   <button id="qrClose">닫기</button>
 </dialog>
 
-<footer>made by @earth._.uz <a href="./" id="toPub">🌷 공유 화면</a><a href="?me" id="toMe">🔒 내 공간</a><a href="admin.html" title="관리 화면">⚙️</a></footer>
+<footer>made by @earth._.uz <a href="admin.html" title="관리 화면">⚙️</a></footer>
 
 <script src="vendor/qrcode.js?v=1.4.4"></script>
 <script src="common.js?v=20261020"></script>
 <script>
-const ME = new URLSearchParams(location.search).has("me");
 let categories = [], items = [];
 const OTHER = { id: "_other", name: "기타", emoji: "📦" };
 const catOf = it => categories.find(c => c.id === it.cat) || OTHER;
@@ -104,22 +94,12 @@ function qrSvg(url) {
 
 const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
 
-// Personal files sit in a private repo, so they are fetched with the token instead of a plain link.
-async function downloadPrivate(it, btn) {
-  btn.querySelector(".go").textContent = "받는 중…";
-  try { saveBlob(await gh(REPOS.me, it.file, {}, true), it.name || it.file); }
-  catch (e) { alert("파일을 받지 못했어요: " + e.message); }
-  btn.querySelector(".go").textContent = "⬇ 받기";
-}
-
 function card(it) {
   const cats = [...categories, OTHER];
   const c = catOf(it);
   const isFile = it.type === "file";
   const url = isFile ? "" : safeUrl(it.url);
-  const main = isFile && ME
-    ? el("a", { className: "name", href: "#", onclick: e => { e.preventDefault(); downloadPrivate(it, box); } }, it.title)
-    : isFile
+  const main = isFile
       ? el("a", { className: "name", href: it.file, download: it.name || "" }, it.title)
       : el("a", { className: "name", href: url || "#", target: "_blank", rel: "noopener" }, it.title);
   const box = el("article", { className: "card" },
@@ -177,54 +157,15 @@ function render() {
 
 function fail(e) { console.error(e); $("grid").replaceChildren(el("p", { className: "empty" }, "목록을 불러오지 못했어요. 새로고침(Ctrl+F5)해 주세요.")); }
 
-async function openMe() {
-  try {
-    const file = await gh(REPOS.me, "links.json");
-    ({ categories, items } = normalize(JSON.parse(fromB64(file.content))));
-    $("login").hidden = true;
-    $("q").hidden = false;
-    render();
-  } catch (e) {
-    store("gh_token", null);
-    if (e.status === 401 || e.status === 403 || e.status === 404) {
-      alert("토큰이 만료됐거나 개인 저장소 권한이 없어요. 관리 화면에서 토큰을 다시 설정해 주세요.");
-      showLogin();
-    } else fail(e);
-  }
-}
-
-function showLogin() { $("login").hidden = false; $("q").hidden = true; $("pw").focus(); }
-
-async function login() {
-  if (!$("pw").value) return;
-  $("loginBtn").disabled = true;
-  try { store("gh_token", await unlock($("pw").value)); openMe(); }
-  catch (e) { alert(e.message === "wrong" ? "비밀번호가 틀렸어요." : "열지 못했어요: " + e.message); }
-  finally { $("loginBtn").disabled = false; }
-}
-
 $("q").addEventListener("input", render);
 $("qrClose").onclick = () => $("qrBig").close();
 $("qrBig").addEventListener("click", e => { if (e.target === $("qrBig")) $("qrBig").close(); }); // backdrop click
 addEventListener("hashchange", () => { $("q").value = ""; render(); scrollTo(0, 0); });
-monkeyEyes();
 
-$("toPub").hidden = !ME;
-$("toMe").hidden = ME;
-if (ME) {
-  document.body.classList.add("me");
-  document.title = "class_uz · 내 공간";
-  $("sub").textContent = "🔒 나만 보는 공간이에요";
-  $("deco").textContent = "🔒🐰📒";
-  $("loginBtn").onclick = login;
-  $("pw").addEventListener("keydown", e => e.key === "Enter" && login());
-  load("gh_token") ? openMe() : showLogin();
-} else {
-  fetch("links.json", { cache: "no-cache" })
-    .then(r => r.json())
-    .then(d => { ({ categories, items } = normalize(d)); render(); })
-    .catch(fail);
-}
+fetch("links.json", { cache: "no-cache" })
+  .then(r => r.json())
+  .then(d => { ({ categories, items } = normalize(d)); render(); })
+  .catch(fail);
 </script>
 </body>
 </html>

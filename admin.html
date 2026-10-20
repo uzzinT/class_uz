@@ -14,10 +14,6 @@
   h1 + p { margin: 0 0 20px; color: var(--muted); }
   h1 + p a { color: var(--accent); }
   h2 { font-size: 24px; margin: 22px 0 10px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 6px; }
-  .tabs button { font-weight: 700; }
-  .tabs button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  body.me { --accent: #8C7CF0; --bg: #F7F5FF; --dot: #E6E0FA; --line: #E4DEF5; }
   .cat { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
   .cat input:first-child { text-align: center; font-size: 22px; padding: 6px; }
   .cat button { padding: 6px 10px; }
@@ -55,7 +51,7 @@
 <body>
 <main>
   <h1 class="title">⚙️ 관리 화면</h1>
-  <p>여기서 고친 내용은 <a href="./" target="_blank">공유 화면</a>·<a href="./?me" target="_blank">내 공간</a>에 1~2분 뒤 반영돼요.</p>
+  <p>여기서 고친 내용은 <a href="./" target="_blank">공유 화면</a>에 1~2분 뒤 반영돼요.</p>
 
   <section class="panel" id="login" hidden>
     <label for="pw">관리자 비밀번호</label>
@@ -68,19 +64,15 @@
     <p style="margin-top:0"><b>처음 설정</b> · GitHub 토큰을 한 번만 넣고 관리자 비밀번호를 정해요.</p>
     <label for="token">GitHub 토큰</label>
     <input type="text" id="token" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
-    <p class="hint">토큰은 <b>class_uz</b>와 <b>class_uz_private</b> 두 저장소에 <b>Contents: Read and write</b> 권한이 있어야 해요.</p>
+    <p class="hint">토큰은 <b>class_uz</b> 저장소에 <b>Contents: Read and write</b> 권한이 있어야 해요.</p>
     <label for="newPw">관리자 비밀번호 (10자 이상)</label>
     <input type="password" id="newPw" autocomplete="new-password">
-    <p class="hint">토큰은 이 비밀번호로 암호화돼서 저장돼요. 이 비밀번호로 '내 공간'도 열어요. 잊으면 토큰을 새로 만들어 여기서 다시 설정하면 돼요.</p>
+    <p class="hint">토큰은 이 비밀번호로 암호화돼서 저장돼요. 잊으면 토큰을 새로 만들어 여기서 다시 설정하면 돼요.</p>
     <div class="row" style="margin-top:12px"><button class="primary" id="setupBtn">설정하기</button></div>
   </section>
 
   <div id="editor" hidden>
-    <div class="tabs" role="group" aria-label="어느 쪽을 고칠까요">
-      <button data-repo="pub" aria-pressed="true">🌷 공유 (동료 선생님용)</button>
-      <button data-repo="me" aria-pressed="false">🔒 내 공간 (나만)</button>
-    </div>
-    <p class="hint" id="where"></p>
+    <p class="hint">🌷 링크를 아는 누구나 볼 수 있어요. 학생 개인정보가 담긴 파일은 올리지 마세요.</p>
 
     <h2 class="title">🏷️ 분류</h2>
     <section class="panel">
@@ -140,7 +132,6 @@
 
 <script src="common.js?v=20261020"></script>
 <script>
-let repo = "pub";
 let categories = [], items = [], sha = "";
 let loadedFiles = new Set(); // files referenced when loaded; ones dropped by a save get deleted from the repo
 const openItems = new WeakSet(); // which editors are expanded, kept across re-renders
@@ -152,25 +143,20 @@ const isDirty = () => $("msg").textContent.includes("저장 안 된");
 
 function show(id) { for (const s of ["login", "setup", "editor", "savebar"]) $(s).hidden = !(s === id || (id === "editor" && s === "savebar")); }
 
-// Loads links.json of the current repo; returns false (after telling the user) if the token can't.
+// Loads links.json; returns false (after telling the user) if the token can't.
 async function loadRepo() {
   say("불러오는 중...");
   try {
-    const file = await gh(REPOS[repo], "links.json");
+    const file = await gh(REPO, "links.json");
     sha = file.sha;
     ({ categories, items } = normalize(JSON.parse(fromB64(file.content))));
   } catch (e) {
     alert(e.status === 401 || e.status === 403 || e.status === 404
-      ? "토큰이 만료됐거나 " + REPOS[repo] + " 저장소 권한이 없어요. 토큰을 다시 설정해 주세요."
+      ? "토큰이 만료됐거나 class_uz 저장소 권한이 없어요. 토큰을 다시 설정해 주세요."
       : "불러오지 못했어요: " + e.message);
     return false;
   }
   loadedFiles = new Set(items.filter(it => it.file).map(it => it.file));
-  document.body.classList.toggle("me", repo === "me");
-  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.repo === repo));
-  $("where").textContent = repo === "pub"
-    ? "🌷 링크를 아는 누구나 볼 수 있어요. 학생 개인정보가 담긴 파일은 올리지 마세요."
-    : "🔒 비공개 저장소에 저장돼서 비밀번호를 아는 나만 볼 수 있어요.";
   render();
   say("불러왔어요.");
   return true;
@@ -202,13 +188,10 @@ async function setup() {
   if (pw.length < 10) return alert("비밀번호는 10자 이상으로 정해 주세요.");
   $("setupBtn").disabled = true;
   try {
-    repo = "pub";
     if (!(await openEditor(tok))) return show("setup");
-    try { await gh(REPOS.me, "links.json"); }
-    catch { alert("공개 저장소는 되는데 class_uz_private 권한이 없어요. 토큰에 두 저장소를 모두 넣어 주세요."); store("gh_token", null); return show("setup"); }
     const body = { message: "Set admin password", content: toB64(JSON.stringify(await encryptToken(tok, pw)) + "\n") };
-    try { body.sha = (await gh(REPOS.pub, "auth.json")).sha; } catch (e) { if (e.status !== 404) throw e; }
-    await gh(REPOS.pub, "auth.json", { method: "PUT", body: JSON.stringify(body) });
+    try { body.sha = (await gh(REPO, "auth.json")).sha; } catch (e) { if (e.status !== 404) throw e; }
+    await gh(REPO, "auth.json", { method: "PUT", body: JSON.stringify(body) });
     say("✅ 비밀번호를 설정했어요. 1~2분 뒤부터 다른 기기에서도 비밀번호로 들어올 수 있어요.");
   } catch (e) {
     alert("비밀번호를 저장하지 못했어요: " + e.message);
@@ -339,12 +322,12 @@ function entry(it) {
 async function uploadFile(file, it, fname, summary) {
   if (!file) return;
   if (file.size > MAX_MB * 1024 * 1024) return alert(MAX_MB + "MB보다 작은 파일을 골라 주세요.");
-  if (repo === "pub" && !confirm("'" + file.name + "'을(를) 누구나 받을 수 있게 올릴까요?\n학생 개인정보가 없는지 확인해 주세요.")) return;
+  if (!confirm("'" + file.name + "'을(를) 누구나 받을 수 있게 올릴까요?\n학생 개인정보가 없는지 확인해 주세요.")) return;
   fname.textContent = "올리는 중... ⏳";
   const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(file); });
   const path = "files/" + Date.now().toString(36) + (ext(file.name) ? "." + ext(file.name).replace(/[^a-z0-9]/g, "") : "");
   try {
-    await gh(REPOS[repo], path, { method: "PUT", body: JSON.stringify({ message: "Add file " + file.name, content: b64 }) });
+    await gh(REPO, path, { method: "PUT", body: JSON.stringify({ message: "Add file " + file.name, content: b64 }) });
   } catch (e) {
     fname.textContent = it.name || "";
     return alert("파일을 올리지 못했어요: " + e.message);
@@ -376,7 +359,7 @@ async function save() {
   say("저장하는 중...");
   $("saveBtn").disabled = true;
   try {
-    const res = await gh(REPOS[repo], "links.json", {
+    const res = await gh(REPO, "links.json", {
       method: "PUT",
       body: JSON.stringify({ message: "Update links", content: toB64(JSON.stringify({ categories, items }, null, 2) + "\n"), sha }),
     });
@@ -385,8 +368,8 @@ async function save() {
     const now = new Set(items.filter(it => it.file).map(it => it.file));
     for (const path of [...loadedFiles].filter(p => !now.has(p))) {
       try {
-        const f = await gh(REPOS[repo], path);
-        await gh(REPOS[repo], path, { method: "DELETE", body: JSON.stringify({ message: "Remove file", sha: f.sha }) });
+        const f = await gh(REPO, path);
+        await gh(REPO, path, { method: "DELETE", body: JSON.stringify({ message: "Remove file", sha: f.sha }) });
       } catch (e) { if (e.status !== 404) console.error(e); }
     }
     loadedFiles = now;
@@ -407,13 +390,6 @@ $("setupBtn").onclick = setup;
 $("resetLink").onclick = e => { e.preventDefault(); show("setup"); };
 $("addCatBtn").onclick = () => { categories.push({ id: Date.now().toString(36), name: "", emoji: "🌟" }); render(); dirty(); };
 $("saveBtn").onclick = save;
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = async () => {
-  if (b.dataset.repo === repo) return;
-  if (isDirty() && !confirm("저장 안 된 변경이 있어요. 버리고 넘어갈까요?")) return;
-  const prev = repo;
-  repo = b.dataset.repo;
-  if (!(await loadRepo())) { repo = prev; say(""); }
-});
 $("logoutBtn").onclick = () => { store("gh_token", null); location.href = "./"; }; // back to the public page
 addEventListener("beforeunload", e => { if (isDirty()) e.preventDefault(); });
 

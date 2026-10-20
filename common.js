@@ -1,6 +1,4 @@
-// Public items live in this repo (served by GitHub Pages); personal ones in a private repo
-// that is only reachable with the GitHub token, which the admin password unlocks.
-const REPOS = { pub: "uzzinT/class_uz", me: "uzzinT/class_uz_private" };
+const REPO = "uzzinT/class_uz";
 const $ = id => document.getElementById(id);
 const TINTS = ["#FFD9E2", "#FFEDB8", "#CDEFDD", "#D3E6FF", "#E5DAFF", "#FFDCC8"];
 const tint = i => TINTS[i % TINTS.length];
@@ -49,20 +47,13 @@ async function unlock(pw) {
   catch { throw new Error("wrong"); }
 }
 
-// raw=true downloads the file itself as a Blob (works up to 100MB, unlike the JSON form's 1MB).
-async function gh(repo, path, opts = {}, raw = false) {
-  const res = await fetch("https://api.github.com/repos/" + repo + "/contents/" + path + (raw ? "?t=" + Date.now() : ""), {
+async function gh(repo, path, opts = {}) {
+  const res = await fetch("https://api.github.com/repos/" + repo + "/contents/" + path, {
     ...opts,
-    headers: { Authorization: "Bearer " + load("gh_token"), Accept: raw ? "application/vnd.github.raw" : "application/vnd.github+json" },
+    headers: { Authorization: "Bearer " + load("gh_token"), Accept: "application/vnd.github+json" },
   });
   if (!res.ok) throw Object.assign(new Error(res.status + " " + (await res.text())), { status: res.status });
-  return raw ? res.blob() : res.json();
-}
-
-function saveBlob(blob, name) {
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: name });
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  return res.json();
 }
 
 const ext = name => (name.match(/\.([^.]+)$/)?.[1] || "").toLowerCase();
