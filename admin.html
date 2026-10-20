@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>class_uz · 관리</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<link rel="stylesheet" href="style.css?v=20261020">
+<style>
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 120px; }
+  h1 { font-size: 38px; margin: 0 0 4px; }
+  h1 + p { margin: 0 0 20px; color: var(--muted); }
+  h1 + p a { color: var(--accent); }
+  h2 { font-size: 24px; margin: 22px 0 10px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 6px; }
+  .tabs button { font-weight: 700; }
+  .tabs button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  body.me { --accent: #8C7CF0; --bg: #F7F5FF; --dot: #E6E0FA; --line: #E4DEF5; }
+  .cat { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .cat input:first-child { text-align: center; font-size: 22px; padding: 6px; }
+  .cat button { padding: 6px 10px; }
+  .head { justify-content: space-between; margin: 22px 0 10px; }
+  .head h2 { margin: 0; }
+  .head select { width: auto; padding: 8px 12px; }
+  details.panel { padding: 10px 14px; }
+  details.panel[open] { padding-bottom: 16px; }
+  details.panel > summary { list-style: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  details.panel > summary::-webkit-details-marker { display: none; }
+  details[open] > summary { margin-bottom: 4px; }
+  .sum-icon { font-size: 22px; }
+  .sum-title { font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sum-sub { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  .chev { color: var(--accent); font-size: 14px; white-space: nowrap; }
+  details[open] .chev::after { content: "접기"; }
+  details:not([open]) .chev::after { content: "편집"; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  @media (max-width: 520px) { .two { grid-template-columns: 1fr; } }
+  .upload { display: inline-flex; cursor: pointer; margin: 0; color: var(--ink); font-size: 16px; }
+  .upload input { position: absolute; opacity: 0; width: 1px; }
+  .upload:focus-within { border-color: var(--accent); }
+  .fname { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+  .tools { justify-content: space-between; margin-top: 12px; }
+  .savebar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+             backdrop-filter: blur(6px); border-top: 2px solid var(--line); }
+  .savebar .row { max-width: 760px; margin: 0 auto; justify-content: space-between; flex-wrap: nowrap; }
+  #msg { color: var(--muted); }
+  #saveBtn { font-size: 18px; flex: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1 class="title">⚙️ 관리 화면</h1>
+  <p>여기서 고친 내용은 <a href="./" target="_blank">공개 화면</a>·<a href="./?me" target="_blank">내 공간</a>에 1~2분 뒤 반영돼요.</p>
+
+  <section class="panel" id="login" hidden>
+    <label for="pw">관리자 비밀번호</label>
+    <input type="password" id="pw" autocomplete="current-password">
+    <div class="row" style="margin-top:12px"><button class="primary" id="loginBtn">들어가기</button></div>
+    <p class="hint"><a href="#" id="resetLink">토큰이 만료됐거나 비밀번호를 바꾸고 싶어요</a></p>
+  </section>
+
+  <section class="panel" id="setup" hidden>
+    <p style="margin-top:0"><b>처음 설정</b> · GitHub 토큰을 한 번만 넣고 관리자 비밀번호를 정해요.</p>
+    <label for="token">GitHub 토큰</label>
+    <input type="text" id="token" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
+    <p class="hint">토큰은 <b>class_uz</b>와 <b>class_uz_private</b> 두 저장소에 <b>Contents: Read and write</b> 권한이 있어야 해요.</p>
+    <label for="newPw">관리자 비밀번호 (10자 이상)</label>
+    <input type="password" id="newPw" autocomplete="new-password">
+    <p class="hint">토큰은 이 비밀번호로 암호화돼서 저장돼요. 이 비밀번호로 '내 공간'도 열어요. 잊으면 토큰을 새로 만들어 여기서 다시 설정하면 돼요.</p>
+    <div class="row" style="margin-top:12px"><button class="primary" id="setupBtn">설정하기</button></div>
+  </section>
+
+  <div id="editor" hidden>
+    <div class="tabs" role="group" aria-label="어느 쪽을 고칠까요">
+      <button data-repo="pub" aria-pressed="true">🌷 공개 (학생·학부모용)</button>
+      <button data-repo="me" aria-pressed="false">🔒 내 공간 (나만)</button>
+    </div>
+    <p class="hint" id="where"></p>
+
+    <h2 class="title">🏷️ 분류</h2>
+    <section class="panel">
+      <div id="catList"></div>
+      <button id="addCatBtn" style="margin-top:6px">➕ 분류 추가</button>
+    </section>
+
+    <div class="row head">
+      <h2 class="title">📌 링크 · 파일</h2>
+      <div class="row">
+        <select id="filter" aria-label="분류별로 보기"></select>
+        <button class="primary" id="addLinkBtn">🔗 링크 추가</button>
+        <button class="primary" id="addFileBtn">📎 파일 추가</button>
+      </div>
+    </div>
+    <div id="list"></div>
+    <div class="row"><button id="logoutBtn" style="margin-left:auto">로그아웃</button></div>
+  </div>
+</main>
+
+<div class="savebar" id="savebar" hidden>
+  <div class="row">
+    <span id="msg"></span>
+    <button class="primary" id="saveBtn">💾 저장하기</button>
+  </div>
+</div>
+
+<template id="entryTpl">
+  <details class="panel">
+    <summary>
+      <span class="sum-icon"></span>
+      <span class="sum-title"></span>
+      <span class="sum-sub"></span>
+      <span class="chev" aria-hidden="true"></span>
+    </summary>
+    <div class="two">
+      <div><label>분류</label><select data-k="cat"></select></div>
+      <div><label>아이콘 (비우면 분류 아이콘)</label><input type="text" data-k="emoji" maxlength="4" placeholder="예: 📝"></div>
+    </div>
+    <label>제목</label>
+    <input type="text" data-k="title">
+    <label>설명</label>
+    <textarea data-k="desc"></textarea>
+    <div class="link-only">
+      <label>링크 주소</label>
+      <input type="url" data-k="url" placeholder="https://...">
+    </div>
+    <div class="file-only">
+      <label>파일</label>
+      <div class="row">
+        <label class="upload btn">📤 파일 고르기<input type="file"></label>
+        <span class="fname"></span>
+      </div>
+    </div>
+    <div class="row tools">
+      <div class="row">
+        <button class="up" aria-label="위로">⬆️</button>
+        <button class="down" aria-label="아래로">⬇️</button>
+      </div>
+      <button class="danger del">🗑️ 삭제</button>
+    </div>
+  </details>
+</template>
+
+<script src="common.js?v=20261020"></script>
+<script>
+let repo = "pub";
+let categories = [], items = [], sha = "";
+let loadedFiles = new Set(); // files referenced when loaded; ones dropped by a save get deleted from the repo
+const openItems = new WeakSet(); // which editors are expanded, kept across re-renders
+const MAX_MB = 25;
+
+function say(text) { $("msg").textContent = text; }
+const dirty = () => say("저장 안 된 변경이 있어요.");
+const isDirty = () => $("msg").textContent.includes("저장 안 된");
+
+function show(id) { for (const s of ["login", "setup", "editor", "savebar"]) $(s).hidden = !(s === id || (id === "editor" && s === "savebar")); }
+
+// Loads links.json of the current repo; returns false (after telling the user) if the token can't.
+async function loadRepo() {
+  say("불러오는 중...");
+  try {
+    const file = await gh(REPOS[repo], "links.json");
+    sha = file.sha;
+    ({ categories, items } = normalize(JSON.parse(fromB64(file.content))));
+  } catch (e) {
+    alert(e.status === 401 || e.status === 403 || e.status === 404
+      ? "토큰이 만료됐거나 " + REPOS[repo] + " 저장소 권한이 없어요. 토큰을 다시 설정해 주세요."
+      : "불러오지 못했어요: " + e.message);
+    return false;
+  }
+  loadedFiles = new Set(items.filter(it => it.file).map(it => it.file));
+  document.body.classList.toggle("me", repo === "me");
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.repo === repo));
+  $("where").textContent = repo === "pub"
+    ? "🌷 누구나 볼 수 있어요. 학생 개인정보가 담긴 파일은 올리지 마세요."
+    : "🔒 비공개 저장소에 저장돼서 비밀번호를 아는 나만 볼 수 있어요.";
+  $("filter").replaceChildren();
+  render();
+  say("불러왔어요.");
+  return true;
+}
+
+async function openEditor(tok) {
+  store("gh_token", tok);
+  if (await loadRepo()) return show("editor"), true;
+  store("gh_token", null);
+  return false;
+}
+
+async function login() {
+  if (!$("pw").value) return;
+  $("loginBtn").disabled = true;
+  try {
+    const tok = await unlock($("pw").value);
+    if (!(await openEditor(tok))) show("setup");
+  } catch (e) {
+    alert(e.message === "wrong" ? "비밀번호가 틀렸어요." : "들어가지 못했어요: " + e.message);
+  } finally {
+    $("loginBtn").disabled = false;
+  }
+}
+
+async function setup() {
+  const tok = $("token").value.trim(), pw = $("newPw").value;
+  if (!tok) return alert("GitHub 토큰을 넣어 주세요.");
+  if (pw.length < 10) return alert("비밀번호는 10자 이상으로 정해 주세요.");
+  $("setupBtn").disabled = true;
+  try {
+    repo = "pub";
+    if (!(await openEditor(tok))) return show("setup");
+    try { await gh(REPOS.me, "links.json"); }
+    catch { alert("공개 저장소는 되는데 class_uz_private 권한이 없어요. 토큰에 두 저장소를 모두 넣어 주세요."); store("gh_token", null); return show("setup"); }
+    const body = { message: "Set admin password", content: toB64(JSON.stringify(await encryptToken(tok, pw)) + "\n") };
+    try { body.sha = (await gh(REPOS.pub, "auth.json")).sha; } catch (e) { if (e.status !== 404) throw e; }
+    await gh(REPOS.pub, "auth.json", { method: "PUT", body: JSON.stringify(body) });
+    say("✅ 비밀번호를 설정했어요. 1~2분 뒤부터 다른 기기에서도 비밀번호로 들어올 수 있어요.");
+  } catch (e) {
+    alert("비밀번호를 저장하지 못했어요: " + e.message);
+  } finally {
+    $("setupBtn").disabled = false;
+    $("token").value = $("newPw").value = "";
+  }
+}
+
+const catName = id => categories.find(c => c.id === id)?.name || "기타";
+const catOpts = () => [{ id: "", name: "기타" }, ...categories].map(c => new Option((c.emoji ? c.emoji + " " : "") + (c.name || "이름 없음"), c.id));
+
+function renderFilter() {
+  const f = $("filter"), keep = f.options.length ? f.value : "*";
+  f.replaceChildren(new Option("전체 보기", "*"), ...catOpts());
+  f.value = [...f.options].some(o => o.value === keep) ? keep : "*";
+}
+
+function addItem(type) {
+  const cat = $("filter").value === "*" ? "" : $("filter").value; // starts in the category being viewed
+  const it = type === "file" ? { type, title: "", desc: "", cat, file: "", name: "" } : { type, title: "", desc: "", cat, url: "" };
+  items.unshift(it);
+  openItems.add(it);
+  render();
+  dirty();
+  const first = $("list").firstElementChild;
+  first.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (type === "file") first.querySelector("input[type=file]").click();
+  else first.querySelector("[data-k=title]").focus({ preventScroll: true });
+}
+
+function move(arr, i, d) {
+  const j = i + d;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  render();
+  dirty();
+}
+
+function renderCats() {
+  $("catList").replaceChildren(...categories.map((c, i) => {
+    const row = Object.assign(document.createElement("div"), { className: "cat" });
+    const emoji = Object.assign(document.createElement("input"), { type: "text", value: c.emoji || "", maxLength: 4, ariaLabel: "아이콘" });
+    const name = Object.assign(document.createElement("input"), { type: "text", value: c.name, placeholder: "분류 이름", ariaLabel: "분류 이름" });
+    emoji.oninput = () => { c.emoji = emoji.value.trim(); dirty(); };
+    name.oninput = () => { c.name = name.value; dirty(); };
+    emoji.onchange = name.onchange = render; // refresh the dropdowns
+    const btn = (text, label, fn) => Object.assign(document.createElement("button"), { textContent: text, ariaLabel: label, onclick: fn });
+    const tools = Object.assign(document.createElement("div"), { className: "row" });
+    tools.append(
+      btn("⬆️", "위로", () => move(categories, i, -1)),
+      btn("⬇️", "아래로", () => move(categories, i, 1)),
+      Object.assign(btn("🗑️", "분류 삭제", () => {
+        const n = items.filter(it => it.cat === c.id).length;
+        if (!confirm("'" + (c.name || "이름 없음") + "' 분류를 삭제할까요?" + (n ? "\n여기 있던 " + n + "개는 '기타'로 옮겨져요." : ""))) return;
+        items.forEach(it => { if (it.cat === c.id) it.cat = ""; });
+        categories.splice(i, 1);
+        render();
+        dirty();
+      }), { className: "danger" }),
+    );
+    row.append(emoji, name, tools);
+    return row;
+  }));
+}
+
+function render() {
+  renderCats();
+  renderFilter();
+  const filter = $("filter").value;
+  $("list").replaceChildren(...items.map((it, i) => {
+    const el = $("entryTpl").content.firstElementChild.cloneNode(true);
+    const isFile = it.type === "file";
+    el.open = openItems.has(it);
+    el.hidden = filter !== "*" && (categories.some(c => c.id === it.cat) ? it.cat : "") !== filter;
+    el.addEventListener("toggle", () => { el.open ? openItems.add(it) : openItems.delete(it); });
+    el.querySelector(isFile ? ".link-only" : ".file-only").remove();
+    const summary = () => {
+      el.querySelector(".sum-icon").textContent = it.emoji || categories.find(c => c.id === it.cat)?.emoji || (isFile ? "📎" : "🔗");
+      el.querySelector(".sum-title").textContent = it.title || (isFile ? "새 파일" : "새 링크") + " (제목 없음)";
+      el.querySelector(".sum-sub").textContent = (isFile ? "📎 " : "🔗 ") + catName(it.cat);
+    };
+    summary();
+    el.querySelector("select").append(...catOpts());
+    el.querySelectorAll("[data-k]").forEach(input => {
+      input.value = it[input.dataset.k] || "";
+      input.addEventListener("input", () => { it[input.dataset.k] = input.value; summary(); dirty(); });
+    });
+    if (isFile) {
+      const fname = el.querySelector(".fname");
+      fname.textContent = it.name || "아직 파일이 없어요";
+      el.querySelector("input[type=file]").addEventListener("change", e => uploadFile(e.target.files[0], it, fname, summary));
+    }
+    el.querySelector(".up").onclick = () => move(items, i, -1);
+    el.querySelector(".down").onclick = () => move(items, i, 1);
+    el.querySelector(".del").onclick = () => {
+      if (!confirm("'" + (it.title || "제목 없음") + "'을(를) 삭제할까요?")) return;
+      items.splice(i, 1); render(); dirty();
+    };
+    return el;
+  }));
+}
+
+// Uploads right away to files/ with an ASCII name; the original name is kept for the download.
+async function uploadFile(file, it, fname, summary) {
+  if (!file) return;
+  if (file.size > MAX_MB * 1024 * 1024) return alert(MAX_MB + "MB보다 작은 파일을 골라 주세요.");
+  if (repo === "pub" && !confirm("'" + file.name + "'을(를) 누구나 받을 수 있게 올릴까요?\n학생 개인정보가 없는지 확인해 주세요.")) return;
+  fname.textContent = "올리는 중... ⏳";
+  const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(file); });
+  const path = "files/" + Date.now().toString(36) + (ext(file.name) ? "." + ext(file.name).replace(/[^a-z0-9]/g, "") : "");
+  try {
+    await gh(REPOS[repo], path, { method: "PUT", body: JSON.stringify({ message: "Add file " + file.name, content: b64 }) });
+  } catch (e) {
+    fname.textContent = it.name || "";
+    return alert("파일을 올리지 못했어요: " + e.message);
+  }
+  it.file = path;
+  it.name = file.name;
+  if (!it.title) {
+    it.title = file.name.replace(/\.[^.]+$/, "");
+    fname.closest("details").querySelector("[data-k=title]").value = it.title;
+  }
+  fname.textContent = file.name;
+  summary();
+  say("파일을 올렸어요. '저장하기'를 눌러야 목록에 보여요.");
+}
+
+async function save() {
+  if (categories.some(c => !c.name.trim())) return alert("이름이 비어 있는 분류가 있어요.");
+  const reveal = (it, msg) => { // the bad entry may be collapsed or filtered out
+    openItems.add(it);
+    $("filter").value = "*";
+    render();
+    $("list").children[items.indexOf(it)].scrollIntoView({ block: "center" });
+    alert(msg);
+  };
+  for (const it of items) {
+    if (!it.title?.trim()) return reveal(it, "제목이 비어 있는 항목이 있어요.");
+    if (it.type === "file" && !it.file) return reveal(it, "'" + it.title + "'에 파일을 골라 주세요.");
+    if (it.type !== "file" && !/^https?:\/\/\S+$/.test(it.url?.trim() || "")) return reveal(it, "'" + it.title + "'의 링크 주소는 https:// 로 시작해야 해요.");
+  }
+  say("저장하는 중...");
+  $("saveBtn").disabled = true;
+  try {
+    const res = await gh(REPOS[repo], "links.json", {
+      method: "PUT",
+      body: JSON.stringify({ message: "Update links", content: toB64(JSON.stringify({ categories, items }, null, 2) + "\n"), sha }),
+    });
+    sha = res.content.sha;
+    // Removed or replaced files would otherwise stay downloadable by direct address.
+    const now = new Set(items.filter(it => it.file).map(it => it.file));
+    for (const path of [...loadedFiles].filter(p => !now.has(p))) {
+      try {
+        const f = await gh(REPOS[repo], path);
+        await gh(REPOS[repo], path, { method: "DELETE", body: JSON.stringify({ message: "Remove file", sha: f.sha }) });
+      } catch (e) { if (e.status !== 404) console.error(e); }
+    }
+    loadedFiles = now;
+    say("✅ 저장됐어요! 1~2분 뒤 반영돼요.");
+  } catch (e) {
+    say(e.status === 409
+      ? "다른 곳에서 먼저 수정됐어요. 새로고침한 뒤 다시 고쳐 주세요."
+      : "저장하지 못했어요: " + e.message);
+  } finally {
+    $("saveBtn").disabled = false;
+  }
+}
+
+monkeyEyes();
+$("loginBtn").onclick = login;
+$("pw").addEventListener("keydown", e => e.key === "Enter" && login());
+$("setupBtn").onclick = setup;
+$("resetLink").onclick = e => { e.preventDefault(); show("setup"); };
+$("addCatBtn").onclick = () => { categories.push({ id: Date.now().toString(36), name: "", emoji: "🌟" }); render(); dirty(); };
+$("addLinkBtn").onclick = () => addItem("link");
+$("addFileBtn").onclick = () => addItem("file");
+$("filter").onchange = render;
+$("saveBtn").onclick = save;
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = async () => {
+  if (b.dataset.repo === repo) return;
+  if (isDirty() && !confirm("저장 안 된 변경이 있어요. 버리고 넘어갈까요?")) return;
+  const prev = repo;
+  repo = b.dataset.repo;
+  if (!(await loadRepo())) { repo = prev; say(""); }
+});
+$("logoutBtn").onclick = () => { store("gh_token", null); location.reload(); };
+addEventListener("beforeunload", e => { if (isDirty()) e.preventDefault(); });
+
+if (load("gh_token")) openEditor(load("gh_token")).then(ok => ok || show("login"));
+else fetch("auth.json", { cache: "no-cache" }).then(r => show(r.ok ? "login" : "setup"), () => show("setup"));
+</script>
+</body>
+</html>

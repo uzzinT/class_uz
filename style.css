@@ -1,0 +1,43 @@
+@font-face { font-family: Paperlogy; src: url(https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2) format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: Paperlogy; src: url(https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2) format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  --bg: #FFF9F0; --dot: #F3E6D3; --card: #FFFFFF; --ink: #3D3553; --muted: #8A819C;
+  --accent: #FF7E9D; --accent-ink: #FFFFFF; --line: #EFE4D6; --danger: #E5484D;
+  --shadow: 0 2px 0 var(--line), 0 6px 18px rgba(120, 90, 60, .07);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; color: var(--ink); line-height: 1.55; font-family: Paperlogy, system-ui, sans-serif;
+  background: var(--bg) radial-gradient(var(--dot) 1.2px, transparent 1.3px) 0 0 / 22px 22px;
+}
+.title { font-family: Jua, Paperlogy, sans-serif; font-weight: 400; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+[hidden] { display: none !important; }
+a { color: inherit; }
+
+input[type=text], input[type=url], input[type=password], input[type=search], textarea, select {
+  width: 100%; padding: 11px 14px; border: 2px solid var(--line); border-radius: 14px;
+  background: var(--card); color: var(--ink); font: inherit;
+}
+textarea { resize: vertical; min-height: 60px; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+button, .btn {
+  font: inherit; cursor: pointer; border-radius: 999px; padding: 8px 16px; text-decoration: none;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink); display: inline-flex; align-items: center; gap: 6px;
+}
+button:hover, .btn:hover, button:focus-visible, .btn:focus-visible { border-color: var(--accent); outline: none; }
+button.primary, .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+button.primary:hover { filter: brightness(1.05); }
+button.danger { color: var(--danger); }
+button:disabled { opacity: .5; cursor: wait; }
+
+.panel { background: var(--card); border: 2px solid var(--line); border-radius: 22px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+label { display: block; font-size: 14px; color: var(--muted); margin: 10px 0 4px; }
+.hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.hint a { color: var(--accent); }
+.pwbox { display: flex; gap: 6px; }
+.pwbox button { padding: 0 8px; border-radius: 14px; }
+.pwbox img { width: 28px; height: 28px; }
